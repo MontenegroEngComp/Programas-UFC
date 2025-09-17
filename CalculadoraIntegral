@@ -1,0 +1,219 @@
+import java.util.*;
+import java.util.function.Function;
+
+public class Main {
+    
+    // Classe para representar e avaliar expressões matemáticas
+    static class ExpressionEvaluator {
+        private static final Map<String, Function<Double, Double>> FUNCOES = new HashMap<>();
+        
+        static {
+            // Funções básicas
+            FUNCOES.put("sin", Math::sin);
+            FUNCOES.put("cos", Math::cos);
+            FUNCOES.put("tan", Math::tan);
+            FUNCOES.put("exp", Math::exp);
+            FUNCOES.put("log", Math::log);
+            FUNCOES.put("sqrt", Math::sqrt);
+            FUNCOES.put("abs", Math::abs);
+        }
+        
+        public static double avaliar(String expressao, double x) {
+            expressao = expressao.toLowerCase().replace("x", String.valueOf(x));
+            return avaliarExpressao(expressao);
+        }
+        
+        private static double avaliarExpressao(String expressao) {
+            expressao = expressao.replaceAll("\\s+", "");
+            
+            // Avaliar parênteses primeiro
+            while (expressao.contains("(")) {
+                int inicio = expressao.lastIndexOf("(");
+                int fim = expressao.indexOf(")", inicio);
+                if (fim == -1) throw new IllegalArgumentException("Parênteses não balanceados");
+                
+                String subExpressao = expressao.substring(inicio + 1, fim);
+                double resultado = avaliarExpressao(subExpressao);
+                expressao = expressao.substring(0, inicio) + resultado + expressao.substring(fim + 1);
+            }
+            
+            // Avaliar funções
+            for (String funcao : FUNCOES.keySet()) {
+                while (expressao.contains(funcao)) {
+                    int inicio = expressao.indexOf(funcao);
+                    int fim = encontrarFimFuncao(expressao, inicio + funcao.length());
+                    String argStr = expressao.substring(inicio + funcao.length(), fim);
+                    double arg = avaliarExpressao(argStr);
+                    double resultado = FUNCOES.get(funcao).apply(arg);
+                    expressao = expressao.substring(0, inicio) + resultado + expressao.substring(fim + 1);
+                }
+            }
+            
+            // Avaliar operações básicas
+            return avaliarOperacoes(expressao);
+        }
+        
+        private static int encontrarFimFuncao(String expressao, int inicio) {
+            int parenteses = 0;
+            for (int i = inicio; i < expressao.length(); i++) {
+                char c = expressao.charAt(i);
+                if (c == '(') parenteses++;
+                else if (c == ')') parenteses--;
+                if (parenteses == 0 && (c == '+' || c == '-' || c == '*' || c == '/' || c == '^')) {
+                    return i;
+                }
+            }
+            return expressao.length();
+        }
+        
+        private static double avaliarOperacoes(String expressao) {
+            // Avaliar exponenciação
+            String[] partes = expressao.split("\\^");
+            if (partes.length > 1) {
+                double resultado = Math.pow(avaliarOperacoes(partes[0]), avaliarOperacoes(partes[1]));
+                for (int i = 2; i < partes.length; i++) {
+                    resultado = Math.pow(resultado, avaliarOperacoes(partes[i]));
+                }
+                return resultado;
+            }
+            
+            // Avaliar multiplicação e divisão
+            partes = expressao.split("[*/]");
+            if (partes.length > 1) {
+                double resultado = avaliarOperacoes(partes[0]);
+                int operadorIndex = partes[0].length();
+                
+                for (int i = 1; i < partes.length; i++) {
+                    char operador = expressao.charAt(operadorIndex);
+                    double valor = avaliarOperacoes(partes[i]);
+                    
+                    if (operador == '*') {
+                        resultado *= valor;
+                    } else {
+                        if (valor == 0) throw new ArithmeticException("Divisão por zero");
+                        resultado /= valor;
+                    }
+                    operadorIndex += partes[i].length() + 1;
+                }
+                return resultado;
+            }
+            
+            // Avaliar adição e subtração
+            partes = expressao.split("[+-]", -1);
+            if (partes.length > 1) {
+                double resultado = 0;
+                int operadorIndex = 0;
+                boolean primeiro = true;
+                
+                for (int i = 0; i < partes.length; i++) {
+                    if (partes[i].isEmpty()) continue;
+                    
+                    double valor = avaliarOperacoes(partes[i]);
+                    if (primeiro) {
+                        resultado = valor;
+                        primeiro = false;
+                    } else {
+                        char operador = expressao.charAt(operadorIndex);
+                        if (operador == '+') {
+                            resultado += valor;
+                        } else {
+                            resultado -= valor;
+                        }
+                    }
+                    operadorIndex += partes[i].length() + 1;
+                }
+                return resultado;
+            }
+            
+            // Se não há operações, retornar o número
+            try {
+                return Double.parseDouble(expressao);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Expressão inválida: " + expressao);
+            }
+        }
+    }
+    
+    // Método para calcular a integral usando soma de Riemann
+    public static double calcularIntegral(String funcao, double a, double b, double tolerancia) {
+        if (a == b) return 0;
+        if (a > b) return -calcularIntegral(funcao, b, a, tolerancia);
+        
+        int n = 1000; // Número inicial de retângulos
+        double resultadoAnterior = 0;
+        double resultadoAtual = calcularRiemann(funcao, a, b, n);
+        
+        // Refinar até atingir a tolerância
+        while (Math.abs(resultadoAtual - resultadoAnterior) > tolerancia) {
+            n *= 2;
+            resultadoAnterior = resultadoAtual;
+            resultadoAtual = calcularRiemann(funcao, a, b, n);
+        }
+        
+        return resultadoAtual;
+    }
+    
+    private static double calcularRiemann(String funcao, double a, double b, int n) {
+        double largura = (b - a) / n;
+        double soma = 0;
+        
+        for (int i = 0; i < n; i++) {
+            double x = a + (i + 0.5) * largura; // Ponto médio do retângulo
+            try {
+                double y = ExpressionEvaluator.avaliar(funcao, x);
+                soma += y * largura;
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Erro ao avaliar função em x = " + x + ": " + e.getMessage());
+            }
+        }
+        
+        return soma;
+    }
+    
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("=== CALCULADORA DE INTEGRAIS ===");
+        System.out.println("Digite a função f(x) (use 'x' como variável):");
+        System.out.println("Funções disponíveis: sin, cos, tan, exp, log, sqrt, abs");
+        System.out.println("Exemplos: x^2 + 3*x - 5, sin(x)*cos(x), exp(-x^2)");
+        
+        String funcao = scanner.nextLine();
+        
+        System.out.println("Digite o limite inferior a:");
+        double a = scanner.nextDouble();
+        
+        System.out.println("Digite o limite superior b:");
+        double b = scanner.nextDouble();
+        
+        System.out.println("Digite a tolerância (ex: 0.0001):");
+        double tolerancia = scanner.nextDouble();
+        
+        try {
+            double resultado = calcularIntegral(funcao, a, b, tolerancia);
+            System.out.printf("∫[%.2f, %.2f] %s dx ≈ %.6f%n", a, b, funcao, resultado);
+            
+            // Testar com algumas funções conhecidas
+            System.out.println("\n=== TESTES COM FUNÇÕES CONHECIDAS ===");
+            testarIntegral("x", 0, 1, 0.0001, 0.5); // ∫x dx de 0 a 1 = 0.5
+            testarIntegral("x^2", 0, 1, 0.0001, 1.0/3); // ∫x² dx de 0 a 1 = 1/3
+            testarIntegral("sin(x)", 0, Math.PI, 0.0001, 2.0); // ∫sin(x) dx de 0 a π = 2
+            
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
+        }
+        
+        scanner.close();
+    }
+    
+    private static void testarIntegral(String funcao, double a, double b, double tolerancia, double esperado) {
+        try {
+            double resultado = calcularIntegral(funcao, a, b, tolerancia);
+            double erro = Math.abs(resultado - esperado);
+            System.out.printf("∫%s dx [%.1f,%.1f] = %.6f (esperado: %.6f, erro: %.6f)%n", 
+                            funcao, a, b, resultado, esperado, erro);
+        } catch (Exception e) {
+            System.out.println("Erro no teste: " + e.getMessage());
+        }
+    }
+}
