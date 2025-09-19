@@ -1,14 +1,16 @@
 import java.util.*;
 import java.util.function.Function;
+import java.math.BigDecimal;
 
 public class Main {
-    
-    // Classe para representar e avaliar expressões matemáticas
+
+    // ---- ExpressionEvaluator como classe estática interna ----
     static class ExpressionEvaluator {
         private static final Map<String, Function<Double, Double>> FUNCOES = new HashMap<>();
-        
+        private static final Map<String, Integer> PRECEDENCIA = new HashMap<>();
+        private static final Set<String> OPERADORES = new HashSet<>(Arrays.asList("+", "-", "*", "/", "^"));
+
         static {
-            // Funções básicas
             FUNCOES.put("sin", Math::sin);
             FUNCOES.put("cos", Math::cos);
             FUNCOES.put("tan", Math::tan);
@@ -16,217 +18,227 @@ public class Main {
             FUNCOES.put("log", Math::log);
             FUNCOES.put("sqrt", Math::sqrt);
             FUNCOES.put("abs", Math::abs);
+
+            PRECEDENCIA.put("+", 1);
+            PRECEDENCIA.put("-", 1);
+            PRECEDENCIA.put("*", 2);
+            PRECEDENCIA.put("/", 2);
+            PRECEDENCIA.put("^", 3); // potência é associativa à direita
         }
-        
+
         public static double avaliar(String expressao, double x) {
-            // Formata o número para evitar notação científica
-            String xStr = formatarNumero(x);
+            String xStr = formatNumber(x);
             expressao = expressao.toLowerCase().replace("x", "(" + xStr + ")");
-            return avaliarExpressao(expressao);
-        }
-        
-        private static String formatarNumero(double num) {
-            // Formata o número para evitar notação científica
-            if (Math.abs(num) < 1e-4 && num != 0) {
-                return String.format("%.10f", num).replaceAll("0+$", "").replaceAll("\\.$", "");
-            }
-            return String.valueOf(num);
-        }
-        
-        private static double avaliarExpressao(String expressao) {
             expressao = expressao.replaceAll("\\s+", "");
-            
-            // Avaliar parênteses primeiro
-            while (expressao.contains("(")) {
-                int inicio = expressao.lastIndexOf("(");
-                int fim = expressao.indexOf(")", inicio);
-                if (fim == -1) throw new IllegalArgumentException("Parênteses não balanceados");
-                
-                String subExpressao = expressao.substring(inicio + 1, fim);
-                double resultado = avaliarExpressao(subExpressao);
-                expressao = expressao.substring(0, inicio) + resultado + expressao.substring(fim + 1);
-            }
-            
-            // Avaliar funções
-            for (String funcao : FUNCOES.keySet()) {
-                while (expressao.contains(funcao)) {
-                    int inicio = expressao.indexOf(funcao);
-                    int fim = encontrarFimFuncao(expressao, inicio + funcao.length());
-                    String argStr = expressao.substring(inicio + funcao.length(), fim);
-                    double arg = avaliarExpressao(argStr);
-                    double resultado = FUNCOES.get(funcao).apply(arg);
-                    expressao = expressao.substring(0, inicio) + resultado + expressao.substring(fim + 1);
-                }
-            }
-            
-            // Avaliar operações básicas
-            return avaliarOperacoes(expressao);
+            List<String> tokens = tokenizar(expressao);
+            List<String> rpn = converterParaRPN(tokens);
+            return avaliarRPN(rpn);
         }
-        
-        private static int encontrarFimFuncao(String expressao, int inicio) {
-            int parenteses = 0;
-            for (int i = inicio; i < expressao.length(); i++) {
-                char c = expressao.charAt(i);
-                if (c == '(') parenteses++;
-                else if (c == ')') parenteses--;
-                if (parenteses == 0 && (c == '+' || c == '-' || c == '*' || c == '/' || c == '^')) {
-                    return i;
-                }
-            }
-            return expressao.length();
+
+        private static String formatNumber(double num) {
+            // evita notação científica
+            return new BigDecimal(Double.toString(num)).stripTrailingZeros().toPlainString();
         }
-        
-        private static double avaliarOperacoes(String expressao) {
-            // Primeiro, verificar se é um número
-            try {
-                return Double.parseDouble(expressao);
-            } catch (NumberFormatException e) {
-                // Não é um número, continuar com o parsing
-            }
-            
-            // Avaliar exponenciação
-            String[] partes = expressao.split("\\^");
-            if (partes.length > 1) {
-                double resultado = Math.pow(avaliarOperacoes(partes[0]), avaliarOperacoes(partes[1]));
-                for (int i = 2; i < partes.length; i++) {
-                    resultado = Math.pow(resultado, avaliarOperacoes(partes[i]));
-                }
-                return resultado;
-            }
-            
-            // Avaliar multiplicação e divisão
-            partes = expressao.split("[*/]");
-            if (partes.length > 1) {
-                double resultado = avaliarOperacoes(partes[0]);
-                int operadorIndex = partes[0].length();
-                
-                for (int i = 1; i < partes.length; i++) {
-                    char operador = expressao.charAt(operadorIndex);
-                    double valor = avaliarOperacoes(partes[i]);
-                    
-                    if (operador == '*') {
-                        resultado *= valor;
-                    } else {
-                        if (valor == 0) throw new ArithmeticException("Divisão por zero");
-                        resultado /= valor;
+
+        private static List<String> tokenizar(String expr) {
+            List<String> tokens = new ArrayList<>();
+            StringBuilder numero = new StringBuilder();
+            for (int i = 0; i < expr.length(); i++) {
+                char c = expr.charAt(i);
+                if (Character.isDigit(c) || c == '.') {
+                    numero.append(c);
+                } else {
+                    if (numero.length() > 0) {
+                        tokens.add(numero.toString());
+                        numero.setLength(0);
                     }
-                    operadorIndex += partes[i].length() + 1;
-                }
-                return resultado;
-            }
-            
-            // Avaliar adição e subtração
-            partes = expressao.split("[+-]", -1);
-            if (partes.length > 1) {
-                double resultado = 0;
-                int operadorIndex = 0;
-                boolean primeiro = true;
-                
-                for (int i = 0; i < partes.length; i++) {
-                    if (partes[i].isEmpty()) continue;
-                    
-                    double valor = avaliarOperacoes(partes[i]);
-                    if (primeiro) {
-                        resultado = valor;
-                        primeiro = false;
-                    } else {
-                        char operador = expressao.charAt(operadorIndex);
-                        if (operador == '+') {
-                            resultado += valor;
-                        } else {
-                            resultado -= valor;
+                    if (Character.isLetter(c)) {
+                        StringBuilder func = new StringBuilder();
+                        while (i < expr.length() && Character.isLetter(expr.charAt(i))) {
+                            func.append(expr.charAt(i));
+                            i++;
                         }
+                        i--;
+                        tokens.add(func.toString());
+                    } else if ("+-*/^()".indexOf(c) >= 0) {
+                        tokens.add(String.valueOf(c));
+                    } else {
+                        // ignora outros (ex.: espaços já removidos)
                     }
-                    operadorIndex += partes[i].length() + 1;
                 }
-                return resultado;
             }
-            
-            throw new IllegalArgumentException("Expressão inválida: " + expressao);
+            if (numero.length() > 0) tokens.add(numero.toString());
+            return tokens;
         }
-    }
-    
-    // Método para calcular a integral usando soma de Riemann
+
+        private static List<String> converterParaRPN(List<String> tokens) {
+            List<String> saida = new ArrayList<>();
+            Deque<String> pilha = new ArrayDeque<>();
+
+            for (int i = 0; i < tokens.size(); i++) {
+                String t = tokens.get(i);
+                if (ehNumero(t)) {
+                    saida.add(t);
+                } else if (FUNCOES.containsKey(t)) {
+                    pilha.push(t);
+                } else if (OPERADORES.contains(t)) {
+                    // detectar unário '-'
+                    if (t.equals("-") && (i == 0 || tokens.get(i - 1).equals("(") || OPERADORES.contains(tokens.get(i - 1)))) {
+                        // transforma unário em (0 <valor>) usando 0 antes
+                        saida.add("0");
+                    }
+                    while (!pilha.isEmpty() && OPERADORES.contains(pilha.peek())) {
+                        String opTopo = pilha.peek();
+                        if ((ehEsquerdaAssociativo(t) && PRECEDENCIA.get(t) <= PRECEDENCIA.get(opTopo))
+                                || (!ehEsquerdaAssociativo(t) && PRECEDENCIA.get(t) < PRECEDENCIA.get(opTopo))) {
+                            saida.add(pilha.pop());
+                        } else break;
+                    }
+                    pilha.push(t);
+                } else if (t.equals("(")) {
+                    pilha.push(t);
+                } else if (t.equals(")")) {
+                    while (!pilha.isEmpty() && !pilha.peek().equals("(")) {
+                        saida.add(pilha.pop());
+                    }
+                    if (pilha.isEmpty()) throw new IllegalArgumentException("Parênteses desbalanceados");
+                    pilha.pop(); // remove "("
+                    if (!pilha.isEmpty() && FUNCOES.containsKey(pilha.peek())) {
+                        saida.add(pilha.pop());
+                    }
+                } else {
+                    throw new IllegalArgumentException("Token desconhecido: " + t);
+                }
+            }
+
+            while (!pilha.isEmpty()) {
+                String t = pilha.pop();
+                if (t.equals("(") || t.equals(")")) throw new IllegalArgumentException("Parênteses desbalanceados");
+                saida.add(t);
+            }
+            return saida;
+        }
+
+        private static boolean ehEsquerdaAssociativo(String op) {
+            return !op.equals("^");
+        }
+
+        private static double avaliarRPN(List<String> rpn) {
+            Deque<Double> pilha = new ArrayDeque<>();
+            for (String t : rpn) {
+                if (ehNumero(t)) {
+                    pilha.push(Double.parseDouble(t));
+                } else if (OPERADORES.contains(t)) {
+                    if (pilha.size() < 2) throw new IllegalArgumentException("Expressão inválida (operador sem operandos)");
+                    double b = pilha.pop();
+                    double a = pilha.pop();
+                    switch (t) {
+                        case "+": pilha.push(a + b); break;
+                        case "-": pilha.push(a - b); break;
+                        case "*": pilha.push(a * b); break;
+                        case "/": pilha.push(a / b); break;
+                        case "^": pilha.push(Math.pow(a, b)); break;
+                        default: throw new IllegalArgumentException("Operador desconhecido: " + t);
+                    }
+                } else if (FUNCOES.containsKey(t)) {
+                    if (pilha.isEmpty()) throw new IllegalArgumentException("Função sem argumento: " + t);
+                    double a = pilha.pop();
+                    pilha.push(FUNCOES.get(t).apply(a));
+                } else {
+                    throw new IllegalArgumentException("Token desconhecido no RPN: " + t);
+                }
+            }
+            if (pilha.isEmpty()) throw new IllegalArgumentException("Expressão vazia");
+            return pilha.pop();
+        }
+
+        private static boolean ehNumero(String s) {
+            return s.matches("-?\\d+(\\.\\d+)?");
+        }
+    } // fim ExpressionEvaluator
+
+    // ---- Cálculo de integral por soma de Riemann (ponto médio) ----
     public static double calcularIntegral(String funcao, double a, double b, double tolerancia) {
         if (a == b) return 0;
         if (a > b) return -calcularIntegral(funcao, b, a, tolerancia);
-        
-        int n = 1000; // Número inicial de retângulos
+
+        int n = 1000;
         double resultadoAnterior = 0;
         double resultadoAtual = calcularRiemann(funcao, a, b, n);
-        
-        // Refinar até atingir a tolerância
+
+        final int MAX_N = 1 << 20; // limite de subdivisões (≈1.048.576)
         while (Math.abs(resultadoAtual - resultadoAnterior) > tolerancia) {
+            if (n >= MAX_N) throw new IllegalStateException("Não convergiu: limite máximo de subdivisões atingido (n=" + n + ").");
             n *= 2;
             resultadoAnterior = resultadoAtual;
             resultadoAtual = calcularRiemann(funcao, a, b, n);
         }
-        
+
         return resultadoAtual;
     }
-    
+
     private static double calcularRiemann(String funcao, double a, double b, int n) {
         double largura = (b - a) / n;
         double soma = 0;
-        
         for (int i = 0; i < n; i++) {
-            double x = a + (i + 0.5) * largura; // Ponto médio do retângulo
+            double x = a + (i + 0.5) * largura;
+            double y;
             try {
-                double y = ExpressionEvaluator.avaliar(funcao, x);
-                soma += y * largura;
+                y = ExpressionEvaluator.avaliar(funcao, x);
             } catch (Exception e) {
-                throw new IllegalArgumentException("Erro ao avaliar função em x = " + x + ": " + e.getMessage());
+                throw new IllegalArgumentException("Erro ao avaliar função em x = " + x + ": " + e.getMessage(), e);
             }
+            soma += y * largura;
         }
-        
         return soma;
     }
-    
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        
-        System.out.println("=== CALCULADORA DE INTEGRAIS ===");
-        System.out.println("Digite a função f(x) (use 'x' como variável):");
-        System.out.println("Funções disponíveis: sin, cos, tan, exp, log, sqrt, abs");
-        System.out.println("Exemplos: x^2 + 3*x - 5, sin(x)*cos(x), exp(-x^2)");
-        System.out.println("IMPORTANTE: Use '*' para multiplicação explícita");
-        
-        String funcao = scanner.nextLine();
-        
-        System.out.println("Digite o limite inferior a:");
-        double a = scanner.nextDouble();
-        
-        System.out.println("Digite o limite superior b:");
-        double b = scanner.nextDouble();
-        
-        System.out.println("Digite a tolerância (ex: 0.0001):");
-        double tolerancia = scanner.nextDouble();
-        
-        try {
-            double resultado = calcularIntegral(funcao, a, b, tolerancia);
-            System.out.printf("∫[%.2f, %.2f] %s dx ≈ %.6f%n", a, b, funcao, resultado);
-            
-            // Testar com algumas funções conhecidas
-            System.out.println("\n=== TESTES COM FUNÇÕES CONHECIDAS ===");
-            testarIntegral("x", 0, 1, 0.0001, 0.5);
-            testarIntegral("x^2", 0, 1, 0.0001, 1.0/3);
-            
-        } catch (Exception e) {
-            System.out.println("Erro: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        scanner.close();
-    }
-    
+
     private static void testarIntegral(String funcao, double a, double b, double tolerancia, double esperado) {
         try {
             double resultado = calcularIntegral(funcao, a, b, tolerancia);
             double erro = Math.abs(resultado - esperado);
-            System.out.printf("∫%s dx [%.1f,%.1f] = %.6f (esperado: %.6f, erro: %.6f)%n", 
-                            funcao, a, b, resultado, esperado, erro);
+            System.out.printf("∫%s dx [%.1f,%.1f] = %.6f (esperado: %.6f, erro: %.6f)%n",
+                    funcao, a, b, resultado, esperado, erro);
         } catch (Exception e) {
             System.out.println("Erro no teste " + funcao + ": " + e.getMessage());
+        }
+    }
+
+    // ---- main ----
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("=== CALCULADORA DE INTEGRAIS ===");
+        System.out.println("Digite a função f(x) (use 'x' como variável):");
+        System.out.println("Funções: sin, cos, tan, exp, log, sqrt, abs");
+        System.out.println("Ex.: x^2 + 3*x - 5   |   sin(x)*cos(x)   |   exp(-x^2)");
+        System.out.println("IMPORTANTE: use '*' para multiplicação explícita");
+
+        String funcao = scanner.nextLine();
+
+        System.out.println("Digite o limite inferior a:");
+        double a = scanner.nextDouble();
+
+        System.out.println("Digite o limite superior b:");
+        double b = scanner.nextDouble();
+
+        System.out.println("Digite a tolerância (ex: 0.0001):");
+        double tolerancia = scanner.nextDouble();
+
+        try {
+            double resultado = calcularIntegral(funcao, a, b, tolerancia);
+            System.out.printf("∫[%.4f, %.4f] %s dx ≈ %.8f%n", a, b, funcao, resultado);
+
+            // testes rápidos
+            System.out.println("\n=== TESTES ===");
+            testarIntegral("x", 0, 1, 1e-4, 0.5);
+            testarIntegral("x^2", 0, 1, 1e-4, 1.0 / 3.0);
+
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            scanner.close();
         }
     }
 }
