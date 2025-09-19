@@ -2,9 +2,13 @@
 Programas para resolução das atividades do curso de Engenharia de Computação da UFC
 
 
+* Aluna: Clarisse Maria Cabral Montenegro
+* Matrícula: 580585
+* Cálculo 2 - 2025.2 - Prof. Renan da Silva Santos
+
 
 Calculadora de Integrais Numéricas
-
+* Linguagem: Java
 
 
 
