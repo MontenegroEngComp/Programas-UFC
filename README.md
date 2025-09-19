@@ -7,74 +7,75 @@ Calculadora de Integrais Numéricas
 
 
 
-#Visão Geral:
+
+# Visão Geral:
 
 Uma aplicação Java robusta para cálculo numérico de integrais definidas utilizando o método dos retângulos (soma de Riemann) com refinamento adaptativo de precisão.
 
 
 
-#Funcionalidades:
+# Funcionalidades:
 
-*Cálculo preciso de integrais definidas usando método dos retângulos com ponto médio
+* Cálculo preciso de integrais definidas usando método dos retângulos com ponto médio
 
-*Suporte extensivo a funções matemáticas elementares e compostas
+* Suporte extensivo a funções matemáticas elementares e compostas
 
-*Refinamento adaptativo automático baseado em tolerância definida pelo usuário
+* Refinamento adaptativo automático baseado em tolerância definida pelo usuário
 
-*Interface interativa amigável via linha de comando
+* Interface interativa amigável via linha de comando
 
-*Sistema de testes integrado com funções de validação
-
-
-
-#Funções Suportadas
-
-*Operações Básicas	+, -, *, /, ^	x^2 + 3*x - 5
-
-*Trigonométricas	sin, cos, tan	sin(x)*cos(x)
-
-*Exponenciais/Log	exp, log	exp(-x^2)
-
-*Outras	sqrt, abs	sqrt(x^2 + 1)
+* Sistema de testes integrado com funções de validação
 
 
 
-#Como Executar:
+# Funções Suportadas
 
-*Pré-requisitos - Java JDK 8 ou superior
+* Operações Básicas	+, -, *, /, ^	x^2 + 3*x - 5
 
-*Passo a Passo:
+* Trigonométricas	sin, cos, tan	sin(x)*cos(x)
 
-1)Salve o código em um arquivo chamado Main.java
+* Exponenciais/Log	exp, log	exp(-x^2)
+
+* Outras	sqrt, abs	sqrt(x^2 + 1)
 
 
-2)Compile o programa:
+
+# Como Executar:
+
+* Pré-requisitos - Java JDK 8 ou superior
+
+* Passo a Passo:
+
+1) Salve o código em um arquivo chamado Main.java
+
+
+2) Compile o programa:
 
 bash
 
 javac Main.java
 
 
-3)Execute o programa:
+3) Execute o programa:
 
 bash
 
 java Main
 
 
-4)Siga as instruções no terminal para inserir:
+4) Siga as instruções no terminal para inserir:
 
-*Função matemática
+* Função matemática
 
-*Limites de integração
+* Limites de integração
 
-*Tolerância desejada
+* Tolerância desejada
 
 
 
-#Exemplos de Uso
+# Exemplos de Uso
 
-*Exemplo 1: Polinômio
+* Exemplo 1: Polinômio
 
 text
 Função: x^2 + 2*x + 1
@@ -88,7 +89,7 @@ Tolerância: 0.0001
 Saída esperada: ∫[0.00, 2.00] x^2 + 2*x + 1 dx ≈ 6.666667
 
 
-*Exemplo 2: Função Trigonométrica
+* Exemplo 2: Função Trigonométrica
 
 text
 
@@ -103,7 +104,7 @@ Tolerância: 0.00001
 Saída esperada: ∫[0.00, 3.14] sin(x) + cos(x) dx ≈ 2.000000
 
 
-*Exemplo 3: Função Exponencial
+* Exemplo 3: Função Exponencial
 
 text
 Função: exp(x)
@@ -118,9 +119,9 @@ Saída esperada: ∫[0.00, 1.00] exp(x) dx ≈ 1.718282
 
 
 
-#Arquitetura do Código
+# Arquitetura do Código
 
-*Estrutura de Classes
+* Estrutura de Classes
 
 java
 
@@ -146,15 +147,15 @@ Main
 
 
 
-#Método de Integração
+# Método de Integração
 
 
-*O programa implementa o método dos retângulos com as seguintes características:
+* O programa implementa o método dos retângulos com as seguintes características:
 
 Ponto médio: Cada retângulo é calculado no centro do intervalo
 
 
-*Refinamento adaptativo:
+* Refinamento adaptativo:
 
 Inicia com 1000 retângulos
 
@@ -163,11 +164,11 @@ Dobra a quantidade a cada iteração
 Para quando a diferença entre iterações for menor que a tolerância
 
 
-*Controle de erro: Monitora a convergência do resultado
+* Controle de erro: Monitora a convergência do resultado
 
 
 
-#Algoritmo Principal
+# Algoritmo Principal
 
 java
 
@@ -191,36 +192,36 @@ public static double calcularIntegral(String funcao, double a, double b, double 
 
 
 
-#Sistema de Avaliação de Expressões
+# Sistema de Avaliação de Expressões
 
 Parser Matemático
 
 O ExpressionEvaluator processa expressões em múltiplas etapas:
 
-*Substituição de variável: x → valor numérico
+* Substituição de variável: x → valor numérico
 
-*Processamento de parênteses: Resolve expressões aninhadas
+* Processamento de parênteses: Resolve expressões aninhadas
 
-*Avaliação de funções: Aplica funções matemáticas
+* Avaliação de funções: Aplica funções matemáticas
 
-*Execução de operações: Realiza cálculos seguindo precedência
-
-
-#Ordem de Operações
-
-1)Parênteses ( )
-
-2)Funções (sin, cos, exp, etc.)
-
-3)Exponenciação ^
-
-4)Multiplicação * e Divisão /
-
-5)Adição + e Subtração -
+* Execução de operações: Realiza cálculos seguindo precedência
 
 
+# Ordem de Operações
 
-#Testes e Validação
+1) Parênteses ( )
+
+2) Funções (sin, cos, exp, etc.)
+
+3) Exponenciação ^
+
+4) Multiplicação * e Divisão /
+
+5) Adição + e Subtração -
+
+
+
+# Testes e Validação
 Testes Automáticos
 
 O programa inclui testes integrados para validar a precisão:
@@ -235,7 +236,7 @@ testarIntegral("sin(x)", 0, Math.PI, 0.0001, 2.0); // ∫sin(x) dx = 2
 
 
 
-#Métricas de Precisão
+# Métricas de Precisão
 
 Tolerância típica: 0.0001 a 0.000001
 
@@ -245,9 +246,9 @@ Crescimento exponencial: Dobra a cada iteração
 
 
 
-#Casos de Uso
+# Casos de Uso
 
-*Educacional:
+* Educacional:
 
 Ensino de cálculo integral
 
@@ -256,7 +257,7 @@ Demonstração de métodos numéricos
 Experimentação com diferentes funções
 
 
-*Científico:
+* Científico:
 
 Cálculo de áreas sob curvas
 
@@ -265,7 +266,7 @@ Solução de problemas de física
 Análise de dados experimentais
 
 
-*Engineering:
+* Engenharia:
 
 Cálculos de engenharia
 
