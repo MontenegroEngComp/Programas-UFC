@@ -9,6 +9,7 @@ Programas para resolução das atividades do curso de Engenharia de Computação
 
 Calculadora de Integrais Numéricas
 * Linguagem: Java
+* Testes unitários em vídeo: https://youtu.be/fG_h5CrIOQI
 
 
 
